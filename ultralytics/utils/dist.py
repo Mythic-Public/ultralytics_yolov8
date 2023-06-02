@@ -1,9 +1,11 @@
 # Ultralytics 🚀 AGPL-3.0 License - https://ultralytics.com/license
 
 import os
+import re
 import shutil
 import sys
 import tempfile
+from pathlib import Path
 
 from . import USER_CONFIG_DIR
 from .torch_utils import TORCH_1_9
@@ -92,10 +94,20 @@ def generate_ddp_command(world_size: int, trainer):
 
     if not trainer.resume:
         shutil.rmtree(trainer.save_dir)  # remove the save_dir
-    file = generate_ddp_file(trainer)
+    file = str(Path(sys.argv[0]).resolve())
+    file_and_args = sys.argv
+    # The safe_pattern and `if` logic is from an older version of this function.
+    # https://github.com/ultralytics/ultralytics/pull/6009/commits/b7a6b4bc47e671a42e273c5d87ef8a095e8a92eb removed it
+    # and patially fixed the parameter passing issue. Unfortunatly the fix does not cover our use case.
+    # - IP, Feb 06, 2024.
+    safe_pattern = re.compile(r"^[a-zA-Z0-9_. /\\-]{1,128}$")  # allowed characters and maximum of 100 characters
+    if not (safe_pattern.match(file) and Path(file).exists() and file.endswith(".py")):  # using CLI
+        file = generate_ddp_file(trainer)
+        file_and_args = [file]
     dist_cmd = "torch.distributed.run" if TORCH_1_9 else "torch.distributed.launch"
     port = find_free_network_port()
-    cmd = [sys.executable, "-m", dist_cmd, "--nproc_per_node", f"{world_size}", "--master_port", f"{port}", file]
+    cmd = ([sys.executable, "-m", dist_cmd, "--nproc_per_node", f"{world_size}", "--master_port", f"{port}"]
+           + file_and_args)
     return cmd, file
 
 

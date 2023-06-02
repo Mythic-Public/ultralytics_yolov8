@@ -88,13 +88,14 @@ class PoseTrainer(yolo.detect.DetectionTrainer):
         Returns:
             (PoseModel): Initialized pose estimation model.
         """
-        model = PoseModel(
-            cfg, nc=self.data["nc"], ch=self.data["channels"], data_kpt_shape=self.data["kpt_shape"], verbose=verbose
-        )
+        model = self.get_model_class()(cfg, ch=self.data["channels"], nc=self.data["nc"], data_kpt_shape=self.data["kpt_shape"], verbose=verbose)
         if weights:
             model.load(weights)
 
         return model
+
+    def get_model_class(self):
+        return PoseModel
 
     def set_model_attributes(self):
         """Set keypoints shape attribute of PoseModel."""

@@ -63,7 +63,12 @@ class DetectionTrainer(BaseTrainer):
             (Dataset): YOLO dataset object configured for the specified mode.
         """
         gs = max(int(de_parallel(self.model).stride.max() if self.model else 0), 32)
-        return build_yolo_dataset(self.args, img_path, batch, self.data, mode=mode, rect=mode == "val", stride=gs)
+        return build_yolo_dataset(self.args, img_path, batch, self.data, mode=mode, rect=self.use_rect_images(mode),
+                                  stride=gs)
+
+    def use_rect_images(self, mode):
+        """Return true if rectangular images should be used in `mode`."""
+        return mode == "val"
 
     def get_dataloader(self, dataset_path: str, batch_size: int = 16, rank: int = 0, mode: str = "train"):
         """
@@ -138,10 +143,13 @@ class DetectionTrainer(BaseTrainer):
         Returns:
             (DetectionModel): YOLO detection model.
         """
-        model = DetectionModel(cfg, nc=self.data["nc"], ch=self.data["channels"], verbose=verbose and RANK == -1)
+        model = self.get_model_class()(cfg, nc=self.data["nc"], ch=self.data["channels"], verbose=verbose and RANK == -1)
         if weights:
             model.load(weights)
         return model
+
+    def get_model_class(self):
+        return DetectionModel
 
     def get_validator(self):
         """Return a DetectionValidator for YOLO model validation."""
