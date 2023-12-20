@@ -105,7 +105,7 @@ class BaseDataset(Dataset):
         """
         super().__init__()
         self.img_path = img_path
-        self.imgsz = imgsz
+        self.imgsz = (imgsz, imgsz) if isinstance(imgsz, int) else imgsz
         self.augment = augment
         self.single_cls = single_cls
         self.prefix = prefix
@@ -239,12 +239,12 @@ class BaseDataset(Dataset):
 
             h0, w0 = im.shape[:2]  # orig hw
             if rect_mode:  # resize long side to imgsz while maintaining aspect ratio
-                r = self.imgsz / max(h0, w0)  # ratio
+                r = min(self.imgsz[0] / h0, self.imgsz[1] / w0)  # ratio
                 if r != 1:  # if sizes are not equal
-                    w, h = (min(math.ceil(w0 * r), self.imgsz), min(math.ceil(h0 * r), self.imgsz))
+                    w, h = (min(math.ceil(w0 * r), self.imgsz[1]), min(math.ceil(h0 * r), self.imgsz[0]))
                     im = cv2.resize(im, (w, h), interpolation=cv2.INTER_LINEAR)
-            elif not (h0 == w0 == self.imgsz):  # resize by stretching image to square imgsz
-                im = cv2.resize(im, (self.imgsz, self.imgsz), interpolation=cv2.INTER_LINEAR)
+            elif h0 != self.imgsz[0] or w0 != self.imgsz[1]:  # resize by stretching image to square imgsz
+                im = cv2.resize(im, self.imgsz, interpolation=cv2.INTER_LINEAR)
             if im.ndim == 2:
                 im = im[..., None]
 
@@ -335,7 +335,7 @@ class BaseDataset(Dataset):
             im = imread(random.choice(self.im_files))  # sample image
             if im is None:
                 continue
-            ratio = self.imgsz / max(im.shape[0], im.shape[1])  # max(h, w)  # ratio
+            ratio = min(self.imgsz[0] / im.shape[0], self.imgsz[1] / im.shape[1])  # max(h, w)  # ratio
             b += im.nbytes * ratio**2
         mem_required = b * self.ni / n * (1 + safety_margin)  # GB required to cache dataset into RAM
         mem = __import__("psutil").virtual_memory()
@@ -371,6 +371,7 @@ class BaseDataset(Dataset):
             elif mini > 1:
                 shapes[i] = [1, 1 / mini]
 
+        assert self.imgsz[0] == self.imgsz[1], 'Fix me: figure out what to do in this case.'
         self.batch_shapes = np.ceil(np.array(shapes) * self.imgsz / self.stride + self.pad).astype(int) * self.stride
         self.batch = bi  # batch index of image
 

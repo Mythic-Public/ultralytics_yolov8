@@ -1699,7 +1699,8 @@ class LetterBox:
             img = pad_img
 
         if labels.get("ratio_pad"):
-            labels["ratio_pad"] = (labels["ratio_pad"], (left, top))  # for evaluation
+            # for evaluation
+            labels["ratio_pad"] = ((labels['ratio_pad'][0] * r, labels['ratio_pad'][1] * r), (left, top))
 
         if len(labels):
             labels = self._update_labels(labels, ratio, left, top)
@@ -2506,6 +2507,9 @@ def v8_transforms(dataset, imgsz, hyp, stretch=False):
         >>> transforms = v8_transforms(dataset, imgsz=640, hyp=hyp)
         >>> augmented_data = transforms(dataset[0])
     """
+    if not isinstance(imgsz, int):
+        assert imgsz[0] == imgsz[1]
+        imgsz = imgsz[0]
     mosaic = Mosaic(dataset, imgsz=imgsz, p=hyp.mosaic)
     affine = RandomPerspective(
         degrees=hyp.degrees,

@@ -122,7 +122,7 @@ class BaseValidator:
         (self.save_dir / "labels" if self.args.save_txt else self.save_dir).mkdir(parents=True, exist_ok=True)
         if self.args.conf is None:
             self.args.conf = 0.01 if self.args.task == "obb" else 0.001  # reduce OBB val memory usage
-        self.args.imgsz = check_imgsz(self.args.imgsz, max_dim=1)
+        self.args.imgsz = check_imgsz(self.args.imgsz, max_dim=2)
 
         self.plots = {}
         self.callbacks = _callbacks or callbacks.get_default_callbacks()
@@ -165,12 +165,12 @@ class BaseValidator:
             self.device = model.device  # update device
             self.args.half = model.fp16  # update half
             stride, pt, jit, engine = model.stride, model.pt, model.jit, model.engine
-            imgsz = check_imgsz(self.args.imgsz, stride=stride)
+            imgsz = check_imgsz(self.args.imgsz, stride=stride, min_dim=2)
             if engine:
                 self.args.batch = model.batch_size
             elif not (pt or jit or getattr(model, "dynamic", False)):
                 self.args.batch = model.metadata.get("batch", 1)  # export.py models default to batch-size 1
-                LOGGER.info(f"Setting batch={self.args.batch} input of shape ({self.args.batch}, 3, {imgsz}, {imgsz})")
+                LOGGER.info(f"Setting batch={self.args.batch} input of shape ({self.args.batch}, 3, {imgsz[0]}, {imgsz[1]})")
 
             if str(self.args.data).rsplit(".", 1)[-1] in {"yaml", "yml"}:
                 self.data = check_det_dataset(self.args.data)
@@ -187,7 +187,7 @@ class BaseValidator:
             self.dataloader = self.dataloader or self.get_dataloader(self.data.get(self.args.split), self.args.batch)
 
             model.eval()
-            model.warmup(imgsz=(1 if pt else self.args.batch, self.data["channels"], imgsz, imgsz))  # warmup
+            model.warmup(imgsz=(1 if pt else self.args.batch, self.data["channels"], imgsz[0], imgsz[1]))  # warmup
 
         self.run_callbacks("on_val_start")
         dt = (
