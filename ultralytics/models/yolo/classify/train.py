@@ -91,7 +91,7 @@ class ClassificationTrainer(BaseTrainer):
         Returns:
             (ClassificationModel): Configured PyTorch model for classification.
         """
-        model = ClassificationModel(cfg, nc=self.data["nc"], ch=self.data["channels"], verbose=verbose and RANK == -1)
+        model = self.get_model_class()(cfg, nc=self.data["nc"], ch=self.data["channels"], verbose=verbose and RANK == -1)
         if weights:
             model.load(weights)
 
@@ -103,6 +103,9 @@ class ClassificationTrainer(BaseTrainer):
         for p in model.parameters():
             p.requires_grad = True  # for training
         return model
+
+    def get_model_class(self):
+        return ClassificationModel
 
     def setup_model(self):
         """
