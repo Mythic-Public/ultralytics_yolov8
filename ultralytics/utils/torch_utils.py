@@ -213,10 +213,15 @@ def select_device(device="", batch=0, newline=False, verbose=True):
         n = len(devices)  # device count
         if n > 1:  # multi-GPU
             if batch < 1:
-                raise ValueError(
-                    "AutoBatch with batch<1 not supported for Multi-GPU training, "
-                    f"please specify a valid batch size multiple of GPU count {n}, i.e. batch={n * 8}."
-                )
+                # Disabled by Mythic - we use select_device once at the start of training,
+                # so batch size is not known at this point. Instead we will check for
+                # batch size divisibility in the trainer.
+                # raise ValueError(
+                #     "AutoBatch with batch<1 not supported for Multi-GPU training, "
+                #     f"please specify a valid batch size multiple of GPU count {n}, i.e. batch={n * 8}."
+                # )
+                pass
+
             if batch >= 0 and batch % n != 0:  # check batch_size is divisible by device_count
                 raise ValueError(
                     f"'batch={batch}' must be a multiple of GPU count {n}. Try 'batch={batch // n * n}' or "
