@@ -1334,9 +1334,9 @@ class Attention(nn.Module):
         self.scale = self.key_dim**-0.5
         nh_kd = self.key_dim * num_heads
         h = dim + nh_kd * 2
-        self.qkv = Conv(dim, h, 1, act=False)
-        self.proj = Conv(dim, dim, 1, act=False)
-        self.pe = Conv(dim, dim, 3, 1, g=dim, act=False)
+        self.qkv = Conv(dim, h, 1)
+        self.proj = Conv(dim, dim, 1)
+        self.pe = Conv(dim, dim, 3, 1, g=dim)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -1397,7 +1397,7 @@ class PSABlock(nn.Module):
         super().__init__()
 
         self.attn = Attention(c, attn_ratio=attn_ratio, num_heads=num_heads)
-        self.ffn = nn.Sequential(Conv(c, c * 2, 1), Conv(c * 2, c, 1, act=False))
+        self.ffn = nn.Sequential(Conv(c, c * 2, 1), Conv(c * 2, c, 1))
         self.add = shortcut
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
