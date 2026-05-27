@@ -692,9 +692,12 @@ class ModelEMA:
             msd = de_parallel(model).state_dict()  # model state_dict
             for k, v in self.ema.state_dict().items():
                 if v.dtype.is_floating_point:  # true for FP16 and FP32
-                    v *= d
-                    v += (1 - d) * msd[k].detach()
-                    # assert v.dtype == msd[k].dtype == torch.float32, f'{k}: EMA {v.dtype},  model {msd[k].dtype}'
+                    if k.endswith(('observer.min_val', 'observer.max_val')):
+                        v.data = msd[k].detach().clone()  # hard sync for observer state
+                    else:
+                        v *= d
+                        v += (1 - d) * msd[k].detach()
+                        # assert v.dtype == msd[k].dtype == torch.float32, f'{k}: EMA {v.dtype},  model {msd[k].dtype}'
 
     def update_attr(self, model, include=(), exclude=("process_group", "reducer")):
         """
